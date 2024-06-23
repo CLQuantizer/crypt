@@ -170,7 +170,7 @@
         {/if}
     </div>
 
-    <div>接受到的信息：{receive}</div>
+    <div class="font-bold">Received：<span class="font-normal">{receive}</span></div>
     <textarea bind:value={raw} placeholder="输入需要加密的信息" class="text-gray-700"></textarea>
     <button on:click={doEncrypt}>加密并生成链接</button>
     {#if displayUrl && displayUrl.length > 2}
