@@ -27,15 +27,14 @@
         error = "Error"
     }
 
-    // map from status to color
-    const statusColor = {
-        [statusEnum.none]: "bg-gray-500",
-        [statusEnum.inviteGenerated]: "bg-blue-800",
-        [statusEnum.invited]: "bg-yellow-900",
-        [statusEnum.exchange]: "bg-emerald-800",
-        [statusEnum.chat]: "bg-green-800",
-        [statusEnum.error]: "bg-red-900"
-    }
+    const statusColor: Record<string, string> = {
+        "No ongoing session": "bg-gray-500",
+        "Invite generated. Please send off the link": "bg-blue-800",
+        "Invited to a session": "bg-yellow-900",
+        "Exchanging keys. Please send the new link back": "bg-emerald-800",
+        "Key exchanged. Chatting": "bg-green-800",
+        "Error": "bg-red-900"
+    };
 
     enum actionsEnum {
         start = "Initiate a session",
@@ -175,7 +174,8 @@
                     on:click={startSession}>{action}</button>
         {/if}
         {#if public1 && !public2}
-            <button class="p-2 border rounded border-gray-400 hover:scale-105 transition duration-300 ease-in-out" on:click={acceptInvitation}>{action}</button>
+            <button class="p-2 border rounded border-gray-400 hover:scale-105 transition duration-300 ease-in-out"
+                    on:click={acceptInvitation}>{action}</button>
         {/if}
     </div>
 
