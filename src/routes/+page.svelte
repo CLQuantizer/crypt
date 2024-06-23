@@ -1,11 +1,23 @@
 <script lang="ts">
     import pkg from 'elliptic';
+    import AES from 'crypto-js/aes';
+    import Utf8 from 'crypto-js/enc-utf8';
     import {onMount} from 'svelte';
     import {page} from '$app/stores';
-    import {decrypt, encrypt} from "./utils";
     import {goto} from "$app/navigation";
 
     const {ec} = pkg;
+
+    function encryptString(str: string, key: string): string {
+        console.log("str to encrypt", str);
+        return AES.encrypt(str, key).toString();
+    }
+    // Function to decrypt a string
+    function decryptString(ciphertext: string, key: string): string {
+        const bytes  = AES.decrypt(ciphertext, key);
+        console.log("bytes", bytes);
+        return bytes.toString(Utf8);
+    }
 
     const ENCRYPTED_MESSAGE = 'encryptedMessage';
     let action: string = "";
@@ -89,9 +101,9 @@
         if (!shared) return;
         console.log("sessionId", sessionId);
         console.log("public1", public1);
-        const encrypted = await encrypt(raw, shared);
-        console.log("encrypt", encrypted);
-        const maskURL = `${baseUrl}/?session=${sessionId}&${ENCRYPTED_MESSAGE}=${encrypted}`;
+        const encrypted = encryptString(raw, shared);
+        console.log("encrypted", encrypted);
+        const maskURL = `${baseUrl}/?session=${sessionId}&${ENCRYPTED_MESSAGE}=${encodeURIComponent(encrypted)}`;
         displayUrl = maskURL;
         await copyToClipboard(maskURL);
     }
@@ -135,8 +147,10 @@
         const session = JSON.parse(cache);
         const sharedKey = session?.shared;
         status=statusEnum.chat;
-        console.log("encryptedMessage", encryptedMessage);
-        received=await decrypt(encryptedMessage, sharedKey);
+        const decodedEncrypted = decodeURIComponent(encryptedMessage);
+        console.log("encryptedMessage", decodedEncrypted);
+        received = decryptString(encryptedMessage, sharedKey);
+        console.log("received", received);
     });
 </script>
 
