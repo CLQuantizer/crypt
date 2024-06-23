@@ -3,10 +3,12 @@
     import {onMount} from 'svelte';
     import {page} from '$app/stores';
     import {decrypt, encrypt} from "./utils";
+    import {goto} from "$app/navigation";
 
     const {ec} = pkg;
 
     const ENCRYPTED_MESSAGE = 'encryptedMessage';
+    let action: string = "";
     $: urlParams = $page.url.searchParams;
     $: baseUrl = $page.url.protocol + '//' + $page.url.host;
     $: public1 = urlParams.get('public1')?.toString();
@@ -14,16 +16,30 @@
     $: encryptedMessage = urlParams.get(ENCRYPTED_MESSAGE)?.toString();
     $: sessionId = urlParams.get('session')?.toString();
 
+    $: action = public1 && !public2 ? actionsEnum.accept : actionsEnum.start;
+
     enum statusEnum {
-        start = "状态：开始",
-        accept = "状态：接受邀请",
-        chat = "状态：聊天中",
-        error = "状态：错误"
+        none = "No ongoing session",
+        inviteGenerated = "Invite generated. Please send off the link",
+        invited = "Invited to a session",
+        exchange = "Exchanging keys. Please send the new link back",
+        chat = "Key exchanged. Chatting",
+        error = "Error"
+    }
+
+    // map from status to color
+    const statusColor = {
+        [statusEnum.none]: "bg-gray-500",
+        [statusEnum.inviteGenerated]: "bg-blue-800",
+        [statusEnum.invited]: "bg-yellow-900",
+        [statusEnum.exchange]: "bg-emerald-800",
+        [statusEnum.chat]: "bg-green-800",
+        [statusEnum.error]: "bg-red-900"
     }
 
     enum actionsEnum {
-        start = "开始加密会话",
-        accept = "接受邀请",
+        start = "Initiate a session",
+        accept = "Accept invitation",
         chat = "加密并生成链接",
         restart = "重启加密会话"
     }
@@ -39,7 +55,6 @@
     let start: string = "";
     let status:string = "";
     let displayUrl:string = "";
-    let info:string = "";
     let raw: string = ""
     let receive: string = ""
     const curve = new ec('curve25519');
@@ -55,8 +70,8 @@
         localStorage.setItem(newSessionId, JSON.stringify({ privateKey1: privateKeyStr }));
         const inviteUrl = `${baseUrl}/?session=${encodeURIComponent(newSessionId)}&public1=${encodeURIComponent(publicKeyStr)}`;
         displayUrl = inviteUrl;
+        status = statusEnum.inviteGenerated;
         copyToClipboard(inviteUrl);
-        info = infoEnum.start;
     }
 
     const acceptInvitation = () => {
@@ -70,8 +85,8 @@
         localStorage.setItem(sessionId, JSON.stringify({ shared }));
         const acceptanceUrl = `${baseUrl}/?session=${sessionId}&public2=${publicKey2}`;
         displayUrl = acceptanceUrl;
+        status = statusEnum.exchange;
         copyToClipboard(acceptanceUrl);
-        info=infoEnum.accept;
     }
 
     const doEncrypt = async () => {
@@ -89,38 +104,35 @@
         const maskURL = `${baseUrl}/?session=${sessionId}&${ENCRYPTED_MESSAGE}=${encrypted}`;
         displayUrl = maskURL;
         await copyToClipboard(maskURL);
-        info=infoEnum.chat;
     }
 
     onMount(async () => {
         // fresh page no nothing
         if (!sessionId) {
-            status="状态：开始";
-            start="开始加密会话";
+            status=statusEnum.none;
             return;
         }
         // accept invitation when public1 is not empty and public2 is empty
         if (public1 && !public2) {
-            const cache = localStorage.getItem(sessionId);
-            if (!cache) return;
-            const sessionItem = JSON.parse(cache);
-            if (sessionItem) {
-                status = statusEnum.error;
-                start = "重启加密会话";
-                return;
-            }
+            status = statusEnum.invited;
         }
         if (public2 && !public1) {
             // derive shared key
             const cache = localStorage.getItem(sessionId);
-            if (!cache) return;
+            if (!cache) {
+                status=statusEnum.error;
+                return;
+            }
             const session = JSON.parse(cache);
             const privateKey1 = session?.privateKey1;
-            if (!privateKey1) return;
+            if (!privateKey1) {
+                status=statusEnum.error;
+                return;
+            }
             const key1 = curve.keyFromPrivate(privateKey1);
             const shared = key1.derive(curve.keyFromPublic(public2, 'hex').getPublic()).toString('hex');
             localStorage.setItem(sessionId, JSON.stringify({ shared }));
-            status=statusEnum.accept;
+            status=statusEnum.chat;
             return;
         }
         // in a chat session
@@ -138,20 +150,40 @@
     });
 </script>
 
-<div>
-    {#if sessionId}<div>sessionId: {sessionId}</div>{/if}
-    {#if public1}<div>public1: {public1}</div>{/if}
-    {#if public2}<div>public2: {public2}</div>{/if}
-    {#if encryptedMessage}<div>encryptedMessage: {encryptedMessage}</div>{/if}
-    {#if shared}<div>shared: {shared}</div>{/if}
-    <div>{status}</div>
-    <button on:click={startSession}>{start}</button>
-    {#if public1 && !public2}
-        <button on:click={acceptInvitation}>{actionsEnum.accept}</button>
+<div class="p-2 whitespace-normal m:text-sm lg:text-base flex flex-col gap-2 truncate">
+
+    {#if sessionId}
+        <div class="font-bold">SessionId: <span>{sessionId}</span></div>
+    {:else}
+        <div></div>
     {/if}
+    <div class="flex gap-1 justify-between items-center">
+        <div class="font-bold">Status: <span class={"font-normal p-1 rounded " + (statusColor[status])}>{status}</span></div>
+        <button class="p-2 rounded border border-gray-500" on:click={()=>{
+            localStorage.clear();
+            status = statusEnum.none;
+            goto('/')
+        }}>Refresh</button>
+    </div>
+    {#if shared}<div>shared:{shared}</div>{/if}
+    <div class="flex gap-2 items-center">
+
+    </div>
+    <div class = "flex flex-col justify-center items-center">
+        {#if status === statusEnum.none || status === statusEnum.error}
+            <button class="p-2 border rounded border-gray-400 hover:scale-105 transition duration-300 ease-in-out"
+                    on:click={startSession}>{action}</button>
+        {/if}
+        {#if public1 && !public2}
+            <button class="p-2 border rounded border-gray-400 hover:scale-105 transition duration-300 ease-in-out" on:click={acceptInvitation}>{action}</button>
+        {/if}
+    </div>
+
     <div>接受到的信息：{receive}</div>
     <textarea bind:value={raw} placeholder="输入需要加密的信息" class="text-gray-700"></textarea>
     <button on:click={doEncrypt}>加密并生成链接</button>
-    <div>{displayUrl}</div>
-    <div>{info}</div>
+    {#if displayUrl && displayUrl.length > 2}
+        <span>URL has been copied to clipboard:</span>
+        <p class="text-gray-700">{displayUrl}</p>
+    {/if}
 </div>
