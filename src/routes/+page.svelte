@@ -46,7 +46,7 @@
     let status:string = "";
     let displayUrl:string = "";
     let raw: string = ""
-    let receive: string = ""
+    let received: string = ""
     const curve = new ec('curve25519');
 
     const copyToClipboard = (text: string) => navigator.clipboard.writeText(text)
@@ -136,7 +136,7 @@
         const sharedKey = session?.shared;
         status=statusEnum.chat;
         console.log("encryptedMessage", encryptedMessage);
-        receive=await decrypt(encryptedMessage, sharedKey);
+        received=await decrypt(encryptedMessage, sharedKey);
     });
 </script>
 
@@ -148,7 +148,7 @@
         <div></div>
     {/if}
     <div class="flex gap-1 justify-between items-center">
-        <div class="font-bold">Status: <span class={"font-normal p-1 rounded " + (statusColor[status])}>{status}</span></div>
+        <div class="font-bold">Status: <span class={"font-normal py-1 px-2 rounded " + (statusColor[status])}>{status}</span></div>
         <button class="p-2 rounded border border-gray-500" on:click={()=>{
             localStorage.clear();
             status = statusEnum.none;
@@ -170,8 +170,10 @@
         {/if}
     </div>
 
-    <div class="font-bold">Received：<span class="font-normal">{receive}</span></div>
-    <textarea bind:value={raw} placeholder="输入需要加密的信息" class="text-gray-700"></textarea>
+    {#if received}
+        <div class="font-bold">Received：<span class="font-normal">{received}</span></div>
+    {/if}
+    <textarea bind:value={raw} placeholder="输入需要加密的信息" class="text-gray-700 text-base p-1 rounded"></textarea>
     <button on:click={doEncrypt}>加密并生成链接</button>
     {#if displayUrl && displayUrl.length > 2}
         <span>URL has been copied to clipboard:</span>
