@@ -101,6 +101,10 @@
         if (!shared) return;
         console.log("sessionId", sessionId);
         console.log("public1", public1);
+        if (!raw || raw.length < 1) {
+            alert("Please enter a message to encrypt");
+            return;
+        }
         const encrypted = encryptString(raw, shared);
         console.log("encrypted", encrypted);
         const maskURL = `${baseUrl}/?session=${sessionId}&${ENCRYPTED_MESSAGE}=${encodeURIComponent(encrypted)}`;
