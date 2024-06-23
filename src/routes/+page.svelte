@@ -40,18 +40,9 @@
         start = "Initiate a session",
         accept = "Accept invitation",
         chat = "加密并生成链接",
-        restart = "重启加密会话"
-    }
-
-    enum infoEnum {
-        start = "会话邀请已创建，已自动复制，直接到聊天粘贴",
-        accept = "已接受邀请，已自动复制，直接到聊天粘贴",
-        chat = "已自动复制，直接到聊天粘贴",
-        error = "重启加密会话"
     }
 
     let shared: string = "";
-    let start: string = "";
     let status:string = "";
     let displayUrl:string = "";
     let raw: string = ""
